@@ -35,7 +35,7 @@ class ThreadPoolTest : public Test {
 };
 
 TEST_F(ThreadPoolTest,PoolHasWorkAfterAdd) {
-    pool.add(Work{});
+    pool.add([]{});
     ASSERT_THAT(pool.hasWork(), Eq(1));
 }
 
@@ -43,43 +43,30 @@ TEST_F(ThreadPoolTest,PoolHasNoWorkAfterCreation) {
     ASSERT_THAT(pool.hasWork(), Eq(0));
 }
 
-TEST_F(ThreadPoolTest,PullWork) {
-    pool.add(Work{1});
-    auto work = pool.pull();
-    ASSERT_THAT(work.getId(), 1); 
-}
-
-TEST_F(ThreadPoolTest,WorkGetsPulledInSequence) {
-    pool.add(Work{1});
-    pool.add(Work{2});
-    auto work1 = pool.pull();
-    auto work2 = pool.pull();
-    ASSERT_THAT(work2.getId(), 2); 
-}
-
 TEST_F(ThreadPoolTest,HasNoWorkAfterLastWorkIsPulled) {
-    pool.add(Work{});
-    pool.add(Work{});
+    pool.add([] {});
+    pool.add([] {});
     auto work1 = pool.pull();
     auto work2 = pool.pull();
     ASSERT_THAT(pool.hasWork(), Eq(0));
 }
 
 TEST_F(ThreadPoolTest,HasWorkAfterOneWorkIsPulled) {
-    pool.add(Work{});
-    pool.add(Work{});
-    auto work1 = pool.pull();
+    pool.add([] {});
+    pool.add([] {});
+    auto work = pool.pull();
     ASSERT_THAT(pool.hasWork(), Eq(1));
 }
 
 TEST_F(ThreadPoolTest, PullsWorkInAThread) {
     pool.start(4);
     bool wasWorked{0};
-    Work work{[&] {
+
+    std::function<void()> work = [&]() { 
         std::unique_lock<std::mutex> lock(m);
         wasWorked = true;
         wasExecuted.notify_all();
-    }};
+    };
 
     pool.add(work);
     std::unique_lock<std::mutex> lock(m);
@@ -89,9 +76,8 @@ TEST_F(ThreadPoolTest, PullsWorkInAThread) {
 TEST_F(ThreadPoolTest, ExecutesMultipleWork) {
     pool.start(4);
     unsigned int NumberOfWorkItems{3};
-    Work work{[&] {
-        incrementCountAndNotify();
-    }};
+    std::function<void()> work = [&]() { incrementCountAndNotify(); };
+
     for(unsigned int i{0}; i < NumberOfWorkItems ; i++) {
         pool.add(work);
     } 
@@ -103,9 +89,8 @@ TEST_F(ThreadPoolTest, DispatchMultipleClientThreads) {
     pool.start(4);
     unsigned int NumberOfWorkItems{10};
     unsigned int NumberOfThreads{10};
-    Work work{[&] {
-        incrementCountAndNotify();
-    }};
+
+    std::function<void()> work = [&]() { incrementCountAndNotify(); };
 
     for(unsigned int i{0}; i < NumberOfThreads; i++) {
         threads.push_back(std::make_shared<std::thread>([&] { 
@@ -122,10 +107,11 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
     unsigned int NumberOfThreads=4;
     pool.start(NumberOfThreads);
     std::set<std::thread::id> threadIds;
-    Work work{[&] {
-        threadIds.insert(std::this_thread::get_id()); 
-        incrementCountAndNotify();
-    }};
+
+    std::function<void()> work = [&]() { 
+       threadIds.insert(std::this_thread::get_id()); 
+       incrementCountAndNotify(); 
+    };
 
     unsigned int NumberOfWorkItems{500};
     for(unsigned int j{0}; j < NumberOfWorkItems; j++) { 
@@ -135,4 +121,3 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
     ASSERT_THAT(threadIds.size(),Eq(NumberOfThreads));
  
 }
-
