@@ -38,6 +38,31 @@ class ThreadPool {
      }
      cv.notify_one();
   }
+  
+  template<class F, class... Args>
+    auto submit(F&& task_function, Args&&... args) 
+        -> std::future<typename std::result_of<F(Args...)>::type> {
+
+        using T = typename std::result_of<F(Args...)>::type;
+
+        auto task = std::make_shared<std::packaged_task<T()>> (
+            std::bind(std::forward<F>(task_function), std::forward<Args>(args)...)            
+        );
+        
+        std::future<T> result = task->get_future();
+        auto work = [task] () { (*task)(); };
+
+        {
+            std::lock_guard<std::mutex> guard(m);
+            workQueue.push_front(work);
+        }
+
+        cv.notify_one();
+
+        return result;
+
+    }
+
 
   bool hasWork() {
      return !workQueue.empty();
