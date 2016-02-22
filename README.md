@@ -4,7 +4,7 @@ In birthday_paradox , i used a classic threadpool. Here I try to write a threadp
 I am presenting a short demo on Java Future and Executor at work, so this would be a nice way of showing a C++ ExecutorService implementation
 
 # Code design 
-The change is at adding tasks, in the classic threadpool , it uses callback to update the result of the async process, here it would be returning a future.
+The change is at adding tasks, in the classic threadpool , it uses callback to update the result of the async process, here it would be returning a future. The issue seems to be that std::packaged_task is not copyable but moveable only but std::function is expecting something that is copyable.
 
 to do that , I had to understand the following C++ 11 syntax/concepts
 
@@ -12,4 +12,8 @@ to do that , I had to understand the following C++ 11 syntax/concepts
 - std::forward
 - std::packaged_task
 - std::bind
-- moveable not copyable syntax
+- moveable and copyable
+
+In http://www.mathematik.uni-ulm.de/numerik/hpc/ws15/uebungen/session19/hpc/mt/thread_pool.h.html and https://github.com/progschj/ThreadPool/blob/master/ThreadPool.h the authors have used shared_ptr to wrap the std::packaged_task as shared_ptrs are copyable and moveable.
+
+
