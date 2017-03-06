@@ -17,3 +17,9 @@ to do that , I had to understand the following C++ 11 syntax/concepts
 In http://www.mathematik.uni-ulm.de/numerik/hpc/ws15/uebungen/session19/hpc/mt/thread_pool.h.html and https://github.com/progschj/ThreadPool/blob/master/ThreadPool.h the authors have used shared_ptr to wrap the std::packaged_task as shared_ptrs are copyable and moveable.
 
 Anthony Williams in his book Concurrent C++ in Action uses a function wrapper to replace std::function so that it can be moveable.
+
+# Future plans
+Improve the feature set
+- Work stealing
+- Priority queue
+- Lock free data structures ?
