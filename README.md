@@ -21,5 +21,5 @@ Anthony Williams in his book Concurrent C++ in Action uses a function wrapper to
 # Future plans
 Improve the feature set
 - Work stealing
-- Priority queue
-- Lock free data structures ?
+- Concurrent queue
+- Lock free data structures 
