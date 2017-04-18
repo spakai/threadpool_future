@@ -8,6 +8,7 @@
 #include <condition_variable>                                                                                 
 #include <vector>                                                                                             
 #include <functional>
+#include <future>
 
 class ThreadPool {
   public:
@@ -41,7 +42,8 @@ class ThreadPool {
   
   template<class F, class... Args>
     auto submit(F&& task_function, Args&&... args) 
-        -> std::future<typename std::result_of<F(Args...)>::type> {
+        -> std::future<typename std::result_of<F(Args...)>::type> 
+    {
 
         using T = typename std::result_of<F(Args...)>::type;
 

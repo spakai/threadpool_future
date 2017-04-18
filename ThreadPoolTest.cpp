@@ -121,3 +121,12 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
     ASSERT_THAT(threadIds.size(),Eq(NumberOfThreads));
  
 }
+
+TEST_F(ThreadPoolTest, Future) {
+    pool.start(4);
+
+    auto work = []() -> int { return 1000; } ;
+    auto result = pool.submit(work);
+    ASSERT_THAT(result.get(), Eq(1000));
+    
+}
