@@ -40,15 +40,15 @@ class ThreadPool {
      cv.notify_one();
   }
   
-  template<class F, class... Args>
-    auto submit(F&& task_function, Args&&... args) 
-        -> std::future<typename std::result_of<F(Args...)>::type> 
+  template<class F>
+    auto submit(F&& task_function) 
+        -> std::future<typename std::result_of<F()>::type> 
     {
 
-        using T = typename std::result_of<F(Args...)>::type;
+        using T = typename std::result_of<F()>::type;
 
         auto task = std::make_shared<std::packaged_task<T()>> (
-            std::bind(std::forward<F>(task_function), std::forward<Args>(args)...)            
+            std::bind(std::forward<F>(task_function))            
         );
         
         std::future<T> result = task->get_future();
