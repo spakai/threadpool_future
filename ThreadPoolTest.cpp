@@ -35,7 +35,7 @@ class ThreadPoolTest : public Test {
 };
 
 TEST_F(ThreadPoolTest,PoolHasWorkAfterAdd) {
-    pool.add([]{});
+    pool.add(Work{});
     ASSERT_THAT(pool.hasWork(), Eq(1));
 }
 
@@ -44,16 +44,16 @@ TEST_F(ThreadPoolTest,PoolHasNoWorkAfterCreation) {
 }
 
 TEST_F(ThreadPoolTest,HasNoWorkAfterLastWorkIsPulled) {
-    pool.add([] {});
-    pool.add([] {});
+    pool.add(Work{});
+    pool.add(Work{});
     auto work1 = pool.pull();
     auto work2 = pool.pull();
     ASSERT_THAT(pool.hasWork(), Eq(0));
 }
 
 TEST_F(ThreadPoolTest,HasWorkAfterOneWorkIsPulled) {
-    pool.add([] {});
-    pool.add([] {});
+    pool.add(Work{});
+    pool.add(Work{});
     auto work = pool.pull();
     ASSERT_THAT(pool.hasWork(), Eq(1));
 }
@@ -62,11 +62,11 @@ TEST_F(ThreadPoolTest, PullsWorkInAThread) {
     pool.start(4);
     bool wasWorked{0};
 
-    std::function<void()> work = [&]() { 
+    Work work{[&] {
         std::unique_lock<std::mutex> lock(m);
         wasWorked = true;
         wasExecuted.notify_all();
-    };
+    }};
 
     pool.add(work);
     std::unique_lock<std::mutex> lock(m);
@@ -76,7 +76,8 @@ TEST_F(ThreadPoolTest, PullsWorkInAThread) {
 TEST_F(ThreadPoolTest, ExecutesMultipleWork) {
     pool.start(4);
     unsigned int NumberOfWorkItems{3};
-    std::function<void()> work = [&]() { incrementCountAndNotify(); };
+    std::function<void()> lambdaf = [&]() { incrementCountAndNotify(); };
+    Work work(lambdaf);
 
     for(unsigned int i{0}; i < NumberOfWorkItems ; i++) {
         pool.add(work);
@@ -90,7 +91,8 @@ TEST_F(ThreadPoolTest, DispatchMultipleClientThreads) {
     unsigned int NumberOfWorkItems{10};
     unsigned int NumberOfThreads{10};
 
-    std::function<void()> work = [&]() { incrementCountAndNotify(); };
+    std::function<void()> lambdaf = [&]() { incrementCountAndNotify(); };
+    Work work(lambdaf);
 
     for(unsigned int i{0}; i < NumberOfThreads; i++) {
         threads.push_back(std::make_shared<std::thread>([&] { 
@@ -108,10 +110,12 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
     pool.start(NumberOfThreads);
     std::set<std::thread::id> threadIds;
 
-    std::function<void()> work = [&]() { 
+    std::function<void()> lambdaf = [&]() { 
        threadIds.insert(std::this_thread::get_id()); 
        incrementCountAndNotify(); 
     };
+    
+    Work work(lambdaf);
 
     unsigned int NumberOfWorkItems{500};
     for(unsigned int j{0}; j < NumberOfWorkItems; j++) { 

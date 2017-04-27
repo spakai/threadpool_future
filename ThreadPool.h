@@ -9,6 +9,7 @@
 #include <vector>                                                                                             
 #include <functional>
 #include <future>
+#include "Work.h"
 
 class ThreadPool {
   public:
@@ -20,7 +21,7 @@ class ThreadPool {
 
   void worker() {
      while (!done) {
-         std::function<void()> work;
+         Work work;
          {
              std::unique_lock<std::mutex> ul(m);
              cv.wait(ul,[&] { return ( hasWork() || done );});
@@ -28,11 +29,11 @@ class ThreadPool {
          }
 
          if(done) break;
-         work(); 
+         work.execute(); 
      }
   }
 
-  void add(std::function<void()> work) {
+  void add(Work work) {
      {
          std::lock_guard<std::mutex> guard(m); 
          workQueue.push_front(work);
@@ -43,15 +44,15 @@ class ThreadPool {
   template<class F>
     auto submit(F&& task_function) 
     {
-
-        using T = typename std::result_of<F()>::type;
+        using T = decltype(task_function());
 
         auto task = std::make_shared<std::packaged_task<T()>> (
             std::bind(std::forward<F>(task_function))            
         );
         
         std::future<T> result = task->get_future();
-        auto work = [task] () { (*task)(); };
+        auto lambdaf = [task] () { (*task)(); };
+        Work work(lambdaf);
 
         {
             std::lock_guard<std::mutex> guard(m);
@@ -61,17 +62,15 @@ class ThreadPool {
         cv.notify_one();
 
         return result;
-
     }
-
 
   bool hasWork() {
      return !workQueue.empty();
   }
 
-  std::function<void()> pull() {
+  Work pull() {
      if(workQueue.empty()) {
-         return ([]{});
+         return Work{};
      }
 
      auto work = workQueue.back();
@@ -87,7 +86,7 @@ class ThreadPool {
      }
   }
 
-  std::deque<std::function<void()>> workQueue;                                                          
+  std::deque<Work> workQueue;                                                          
   std::atomic<bool> done {false};                                                                       
   std::mutex m;                                                                                         
   std::condition_variable cv;                                                                           
