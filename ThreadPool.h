@@ -9,7 +9,6 @@
 #include <vector>                                                                                             
 #include <functional>
 #include <future>
-#include "Work.h"
 
 class ThreadPool {
   public:
@@ -21,7 +20,7 @@ class ThreadPool {
 
   void worker() {
      while (!done) {
-         Work work;
+         std::function<void()> work;
          {
              std::unique_lock<std::mutex> ul(m);
              cv.wait(ul,[&] { return ( hasWork() || done );});
@@ -29,11 +28,11 @@ class ThreadPool {
          }
 
          if(done) break;
-         work.execute(); 
+         work(); 
      }
   }
 
-  void add(Work work) {
+  void add(std::function<void()> work) {
      {
          std::lock_guard<std::mutex> guard(m); 
          workQueue.push_front(work);
@@ -51,9 +50,8 @@ class ThreadPool {
         );
         
         std::future<T> result = task->get_future();
-        auto lambdaf = [task] () { (*task)(); };
-        Work work(lambdaf);
-
+        auto work = [task] () { (*task)(); };
+     
         {
             std::lock_guard<std::mutex> guard(m);
             workQueue.push_front(work);
@@ -68,9 +66,9 @@ class ThreadPool {
      return !workQueue.empty();
   }
 
-  Work pull() {
+  std::function<void()> pull() {
      if(workQueue.empty()) {
-         return Work{};
+         return []{};
      }
 
      auto work = workQueue.back();
@@ -86,7 +84,7 @@ class ThreadPool {
      }
   }
 
-  std::deque<Work> workQueue;                                                          
+  std::deque<std::function<void()>> workQueue;                                                          
   std::atomic<bool> done {false};                                                                       
   std::mutex m;                                                                                         
   std::condition_variable cv;                                                                           

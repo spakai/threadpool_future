@@ -10,11 +10,9 @@ set(CMAKE_CXX_FLAGS "${CMAXE_CXX_FLAGS} -Wall -g -O0 --coverage")
 
 set(sources 
    main.cpp
-   Work.cpp
    ThreadPool.h)
 
 set(test_sources
-   WorkTest.cpp
    ThreadPoolTest.cpp)
 
 add_executable(test ${test_sources} ${sources})
