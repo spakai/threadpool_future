@@ -42,7 +42,6 @@ class ThreadPool {
   
   template<class F>
     auto submit(F&& task_function) 
-        -> std::future<typename std::result_of<F()>::type> 
     {
 
         using T = typename std::result_of<F()>::type;
