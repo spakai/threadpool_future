@@ -121,7 +121,7 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
  
 }
 
-TEST_F(ThreadPoolTest, Future) {
+TEST_F(ThreadPoolTest, FutureReturningInt) {
     pool.start(4);
 
     auto work = []() -> int { return 1000; } ;
@@ -129,3 +129,12 @@ TEST_F(ThreadPoolTest, Future) {
     ASSERT_THAT(result.get(), Eq(1000));
     
 }
+
+TEST_F(ThreadPoolTest, FutureReturningString) {
+    pool.start(4);
+
+    auto work = []() -> std::string { return "1000"; } ;
+    auto result = pool.submit(work);
+    ASSERT_THAT(result.get(), StrEq("1000"));
+} 
+  
