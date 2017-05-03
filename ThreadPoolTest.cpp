@@ -3,8 +3,10 @@
 #include <condition_variable>
 #include <mutex>
 #include <set>
+#include <vector>
 
 #include "ThreadPool.h"
+#include "TestTimer.h"
 
 using namespace testing;
 
@@ -153,4 +155,54 @@ TEST_F(ThreadPoolTest,FactorialTest) {
     auto result = pool.submit(work,12);
     
     ASSERT_THAT(result.get(), Eq(479001600));
+}
+
+TEST_F(ThreadPoolTest,TimingTestWithTP) {
+    pool.start(4);
+    std::vector<std::future<unsigned long long>> results;
+    auto work = [](int n) {
+      unsigned long long factorial = 1;
+      for(int i = 1; i <=n; ++i) {
+        factorial *= i;
+      }
+      
+      return factorial;
+
+    };
+    
+    
+    TestTimer timer("4-sized-TP",0);
+    for (int i = 5; i < 60 ; i++) {
+        results.push_back(pool.submit(work,i));
+    }
+    
+    
+    for(unsigned int i = 0; i< results.size(); i++) {
+        results.at(i).get();
+    }
+}
+
+TEST_F(ThreadPoolTest,TimingTestWithoutTP) {
+    
+    std::vector<unsigned long long> results;
+    auto work = [](int n) {
+      unsigned long long factorial = 1;
+      for(int i = 1; i <=n; ++i) {
+        factorial *= i;
+      }
+      
+      return factorial;
+
+    };
+    
+    
+    TestTimer timer("In Sequence",0);
+    for (int i = 5; i < 60 ; i++) {
+        results.push_back(work(i));
+    }
+    
+     for(unsigned int i = 0; i< results.size(); i++) {
+        results.at(i);
+    }
+    
 }
