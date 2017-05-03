@@ -40,13 +40,13 @@ class ThreadPool {
      cv.notify_one();
   }
   
-  template<class F>
-    auto submit(F&& task_function) 
+  template<class F, class... Args>
+    auto submit(F&& task_function, Args&&... args) 
     {
-        using T = decltype(task_function());
+        using T = decltype(task_function(args...));
 
         auto task = std::make_shared<std::packaged_task<T()>> (
-            std::bind(std::forward<F>(task_function))            
+            std::bind(std::forward<F>(task_function), std::forward<Args>(args)...)            
         );
         
         std::future<T> result = task->get_future();
@@ -61,7 +61,7 @@ class ThreadPool {
 
         return result;
     }
-
+  
   bool hasWork() {
      return !workQueue.empty();
   }

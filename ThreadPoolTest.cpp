@@ -138,3 +138,19 @@ TEST_F(ThreadPoolTest, FutureReturningString) {
     ASSERT_THAT(result.get(), StrEq("1000"));
 } 
   
+TEST_F(ThreadPoolTest,FactorialTest) {
+    pool.start(4);
+    auto work = [](int n) {
+      unsigned long long factorial = 1;
+      for(int i = 1; i <=n; ++i) {
+        factorial *= i;
+      }
+      
+      return factorial;
+
+    };
+    
+    auto result = pool.submit(work,12);
+    
+    ASSERT_THAT(result.get(), Eq(479001600));
+}
