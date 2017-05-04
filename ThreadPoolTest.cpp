@@ -157,7 +157,7 @@ TEST_F(ThreadPoolTest,FactorialTest) {
     ASSERT_THAT(result.get(), Eq(479001600));
 }
 
-TEST_F(ThreadPoolTest,TimingTestWithTP) {
+TEST_F(ThreadPoolTest,TimingTestWithFuture) {
     pool.start(4);
     std::vector<std::future<unsigned long long>> results;
     auto work = [](int n) {
@@ -171,7 +171,7 @@ TEST_F(ThreadPoolTest,TimingTestWithTP) {
     };
     
     
-    TestTimer timer("4-sized-TP",0);
+    TestTimer timer("4-sized-TP with Future",0);
     for (int i = 5; i < 60 ; i++) {
         results.push_back(pool.submit(work,i));
     }
@@ -179,6 +179,26 @@ TEST_F(ThreadPoolTest,TimingTestWithTP) {
     
     for(unsigned int i = 0; i< results.size(); i++) {
         results.at(i).get();
+    }
+}
+
+TEST_F(ThreadPoolTest,TimingTestWithCallback) {
+    pool.start(4);
+    // core dumps
+    std::vector<unsigned long long> results;
+    TestTimer timer("4-sized-TP-Callback",0);
+    for (int n = 5; n < 60 ; n++) {
+        auto work = [&]() {
+            unsigned long long factorial = 1;
+            for(int i = 1; i <=n; ++i) {
+              factorial *= i;
+            }
+
+            std::lock_guard<std::mutex> guard(m); 
+            results.push_back(factorial);
+        };
+        
+        pool.add(work);
     }
 }
 
