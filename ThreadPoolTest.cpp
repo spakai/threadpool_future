@@ -184,7 +184,6 @@ TEST_F(ThreadPoolTest,TimingTestWithFuture) {
 
 TEST_F(ThreadPoolTest,TimingTestWithCallback) {
     pool.start(4);
-    // core dumps
     std::vector<unsigned long long> results;
     TestTimer timer("4-sized-TP-Callback",0);
     for (int n = 5; n < 60 ; n++) {
