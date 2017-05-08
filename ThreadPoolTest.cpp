@@ -193,13 +193,17 @@ TEST_F(ThreadPoolTest,TimingTestWithCallback) {
             for(int i = 1; i <=n; ++i) {
               factorial *= i;
             }
-
-            std::lock_guard<std::mutex> guard(m); 
-            results.push_back(factorial);
+            {
+                std::lock_guard<std::mutex> guard(m); 
+                results.push_back(factorial);
+            }
+            incrementCountAndNotify();
         };
         
         pool.add(work);
     }
+    
+    waitForNotificationOrFailOnTimeout(55);
 }
 
 TEST_F(ThreadPoolTest,TimingTestWithoutTP) {
@@ -226,3 +230,4 @@ TEST_F(ThreadPoolTest,TimingTestWithoutTP) {
     }
     
 }
+

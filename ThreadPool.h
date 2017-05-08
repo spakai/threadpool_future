@@ -83,10 +83,10 @@ class ThreadPool {
          t->join();
      }
   }
-
+  std::vector<std::shared_ptr<std::thread>> threads;  
   std::deque<std::function<void()>> workQueue;                                                          
   std::atomic<bool> done {false};                                                                       
   std::mutex m;                                                                                         
   std::condition_variable cv;                                                                           
-  std::vector<std::shared_ptr<std::thread>> threads;  
+  
 };
