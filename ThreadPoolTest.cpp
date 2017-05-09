@@ -22,10 +22,11 @@ class ThreadPoolTest : public Test {
         void incrementCountAndNotify() {
             std::unique_lock<std::mutex> lock(m);
             ++count;
+            std::cout << count << std::endl;
             wasExecuted.notify_all();
         }
        
-        void waitForNotificationOrFailOnTimeout(unsigned expectedCount, int milliseconds=10000) {
+        void waitForNotificationOrFailOnTimeout(unsigned expectedCount, int milliseconds=80000) {
             std::unique_lock<std::mutex> lock(m);
             ASSERT_THAT(wasExecuted.wait_for(lock, std::chrono::milliseconds(milliseconds), [&] { return count == expectedCount; }), Eq(true));      
  
@@ -295,3 +296,37 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
         results.at(i).get();
     }
 } 
+
+
+//this test core dumps
+TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
+    std::vector<int> popList = {10,23,30,40,50,60,70,80,90,100,120,150};
+    
+    pool.start(4);
+    std::vector<int> results;
+    
+    TestTimer timer("4-sized-TP with Callback",0);
+    
+    for(auto it=popList.begin(); it!=popList.end(); ++it) {
+        int id = *it;
+        auto work = [&]() {
+            int dup{0};
+            for(int i{0}; i < 100000 ; i++) {
+                auto list = generateNumbers(id);
+                if(hasDuplicates(list)) ++dup; 
+                
+                {
+                    std::lock_guard<std::mutex> guard(m); 
+                    results.push_back(dup);
+                    
+                }
+            }
+            
+            incrementCountAndNotify();
+        };
+        
+        pool.add(work);       
+    } 
+
+    waitForNotificationOrFailOnTimeout(12);
+}
