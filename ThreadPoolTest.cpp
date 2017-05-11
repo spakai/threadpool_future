@@ -297,7 +297,6 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
 } 
 
 
-//this test core dumps
 TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
     std::vector<int> popList = {10,23,30,40,50,60,70,80,90,100,120,150};
     
@@ -314,11 +313,10 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
                 auto list = generateNumbers(id);
                 if(hasDuplicates(list)) ++dup; 
                 
-                {
-                    std::lock_guard<std::mutex> guard(m); 
-                    results.push_back(dup);
-                    
-                }
+                    {
+                        std::lock_guard<std::mutex> guard(m); 
+                        results.push_back(dup);
+                    }
             }
             
             incrementCountAndNotify();
