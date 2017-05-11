@@ -22,7 +22,6 @@ class ThreadPoolTest : public Test {
         void incrementCountAndNotify() {
             std::unique_lock<std::mutex> lock(m);
             ++count;
-            std::cout << count << std::endl;
             wasExecuted.notify_all();
         }
        
