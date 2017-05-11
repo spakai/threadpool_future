@@ -309,7 +309,7 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
     
     for(auto it=popList.begin(); it!=popList.end(); ++it) {
         int id = *it;
-        auto work = [&]() {
+        auto work = [&,id]() {
             int dup{0};
             for(int i{0}; i < 100000 ; i++) {
                 auto list = generateNumbers(id);
