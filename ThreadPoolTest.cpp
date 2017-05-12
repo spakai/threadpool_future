@@ -15,13 +15,17 @@ class ThreadPoolTest : public Test {
         ThreadPool pool;
         std::condition_variable wasExecuted;
         std::mutex m;
+        std::mutex n;
         std::vector<std::shared_ptr<std::thread>> threads; 
+        std::vector<int> popList = {10,11,12,23};
         
         unsigned int count{0};
  
         void incrementCountAndNotify() {
-            std::unique_lock<std::mutex> lock(m);
-            ++count;
+            {
+                std::unique_lock<std::mutex> lock(m);
+                ++count;
+            }
             wasExecuted.notify_all();
         }
        
@@ -173,84 +177,12 @@ TEST_F(ThreadPoolTest,FactorialTest) {
     ASSERT_THAT(result.get(), Eq(479001600));
 }
 
-TEST_F(ThreadPoolTest,TimingTestWithFuture) {
-    pool.start(4);
-    std::vector<std::future<unsigned long long>> results;
-    auto work = [](int n) {
-      unsigned long long factorial = 1;
-      for(int i = 1; i <=n; ++i) {
-        factorial *= i;
-      }
-      
-      return factorial;
-
-    };
-    
-    TestTimer timer("4-sized-TP with Future",0);
-    for (int i = 5; i < 60 ; i++) {
-        results.push_back(pool.submit(work,i));
-    }
-    
-    
-    for(unsigned int i = 0; i< results.size(); i++) {
-        results.at(i).get();
-    }
-}
-
-TEST_F(ThreadPoolTest,TimingTestWithCallback) {
-    pool.start(4);
-    std::vector<unsigned long long> results;
-    TestTimer timer("4-sized-TP-Callback",0);
-    for (int n = 5; n < 60 ; n++) {
-        auto work = [&]() {
-            unsigned long long factorial = 1;
-            for(int i = 1; i <=n; ++i) {
-              factorial *= i;
-            }
-            {
-                std::lock_guard<std::mutex> guard(m); 
-                results.push_back(factorial);
-            }
-            incrementCountAndNotify();
-        };
-        
-        pool.add(work);
-    }
-    
-    waitForNotificationOrFailOnTimeout(55);
-}
-
-TEST_F(ThreadPoolTest,TimingTestWithoutTP) {
-    
-    std::vector<unsigned long long> results;
-    auto work = [](int n) {
-      unsigned long long factorial = 1;
-        for(int i = 1; i <=n; ++i) {
-          factorial *= i;
-        }
-      
-      return factorial;
-
-    };
-    
-    TestTimer timer("In Sequence",0);
-    for (int i = 5; i < 60 ; i++) {
-        results.push_back(work(i));
-    }
-    
-     for(unsigned int i = 0; i< results.size(); i++) {
-        results.at(i);
-    }
-    
-}
-
 TEST_F(ThreadPoolTest,BirthdayParadoxInSequenceTimingTest) {
     
     std::vector<int> results;
     
     TestTimer timer("Birthday Paradox :: In Sequence",0);
     
-    std::vector<int> popList = {10,23,30,40,50,60,70,80,90,100,120,150};
     for(auto it=popList.begin(); it!=popList.end(); ++it) {
         int id = *it;
         int dup{0};
@@ -268,8 +200,6 @@ TEST_F(ThreadPoolTest,BirthdayParadoxInSequenceTimingTest) {
 }
 
 TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
-    std::vector<int> popList = {10,23,30,40,50,60,70,80,90,100,120,150};
-    
     pool.start(4);
     std::vector<std::future<int>> results;
     
@@ -298,8 +228,6 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
 
 
 TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
-    std::vector<int> popList = {10,23,30,40,50,60,70,80,90,100,120,150};
-    
     pool.start(4);
     std::vector<int> results;
     
@@ -314,7 +242,7 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
                 if(hasDuplicates(list)) ++dup; 
                 
                     {
-                        std::lock_guard<std::mutex> guard(m); 
+                        std::lock_guard<std::mutex> guard(n); 
                         results.push_back(dup);
                     }
             }
@@ -324,6 +252,5 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
         
         pool.add(work);       
     } 
-
-    waitForNotificationOrFailOnTimeout(12);
+    waitForNotificationOrFailOnTimeout(4);
 }
