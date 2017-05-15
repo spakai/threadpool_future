@@ -17,7 +17,7 @@ class ThreadPoolTest : public Test {
         std::mutex m;
         std::mutex n;
         std::vector<std::shared_ptr<std::thread>> threads; 
-        std::vector<int> popList = {10,11,12,23};
+        std::vector<int> popList = {10,12,23,30};
         
         unsigned int count{0};
  
@@ -36,20 +36,26 @@ class ThreadPoolTest : public Test {
         } 
 
         bool hasDuplicates(const std::vector<int> & birthdays) {
-            std::set<int> uniqueBirthdays(birthdays.begin(), birthdays.end());
-            return (uniqueBirthdays.size() != birthdays.size());
+            for(unsigned int i = 0; i < birthdays.size(); i++) {
+                for(unsigned int j = i+1; j < birthdays.size(); j++) {
+                    if(birthdays[i]==birthdays[j]) return true;
+                }
+            }
+            
+            return false;
+            
         }
 
-        std::vector<int> generateNumbers(const int popSize) {
-            std::vector<int> list;
-            std::random_device rd;
-            std::default_random_engine dre(rd());
+         std::vector<int> generateNumbers(std::vector<int>& list) {
+            std::default_random_engine dre(0);
             std::uniform_int_distribution<int> di(0,365);
-            for(int i{0}; i < popSize ; i++) {
-                list.push_back(di(dre));
-            } 
+            int counter = 0;
+            for(int& i : list) {
+                i = di(dre);
+            }
             return list;
         }
+
         
         void TearDown() override {
             for (auto& t: threads) t->join();
@@ -143,40 +149,6 @@ TEST_F(ThreadPoolTest, MakesSureAllThreadsWorkToRetrieveFromQueue) {
  
 }
 
-TEST_F(ThreadPoolTest, FutureReturningInt) {
-    pool.start(4);
-
-    auto work = []() -> int { return 1000; } ;
-    auto result = pool.submit(work);
-    ASSERT_THAT(result.get(), Eq(1000));
-    
-}
-
-TEST_F(ThreadPoolTest, FutureReturningString) {
-    pool.start(4);
-
-    auto work = []() -> std::string { return "1000"; } ;
-    auto result = pool.submit(work);
-    ASSERT_THAT(result.get(), StrEq("1000"));
-} 
-  
-TEST_F(ThreadPoolTest,FactorialTest) {
-    pool.start(4);
-    auto work = [](int n) {
-      unsigned long long factorial = 1;
-      for(int i = 1; i <=n; ++i) {
-        factorial *= i;
-      }
-      
-      return factorial;
-
-    };
-    
-    auto result = pool.submit(work,12);
-    
-    ASSERT_THAT(result.get(), Eq(479001600));
-}
-
 TEST_F(ThreadPoolTest,BirthdayParadoxInSequenceTimingTest) {
     
     std::vector<int> results;
@@ -186,8 +158,9 @@ TEST_F(ThreadPoolTest,BirthdayParadoxInSequenceTimingTest) {
     for(auto it=popList.begin(); it!=popList.end(); ++it) {
         int id = *it;
         int dup{0};
+        std::vector<int> list(id);
         for(int i{0}; i< 100000; i++) {
-            auto list = generateNumbers(id);
+            generateNumbers(list);
             if(hasDuplicates(list)) ++dup;
         }
         
@@ -199,8 +172,36 @@ TEST_F(ThreadPoolTest,BirthdayParadoxInSequenceTimingTest) {
         }
 }
 
+TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
+    pool.start(1);
+    std::vector<int> results;
+    
+    TestTimer timer("4-sized-TP with Callback",0);
+    
+    for(auto it=popList.begin(); it!=popList.end(); ++it) {
+        int id = *it;
+        auto work = [&,id]() {
+            int dup{0};
+            std::vector<int> list(id);
+            for(int i{0}; i < 100000 ; i++) {
+                generateNumbers(list);
+                if(hasDuplicates(list)) ++dup; 
+                    {
+                        std::lock_guard<std::mutex> guard(n); 
+                        results.push_back(dup);
+                    }
+            }
+            
+            incrementCountAndNotify();
+        };
+        
+        pool.add(work);       
+    } 
+    waitForNotificationOrFailOnTimeout(4);
+}
+
 TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
-    pool.start(4);
+    pool.start(1);
     std::vector<std::future<int>> results;
     
     TestTimer timer("4-sized-TP with Future",0);
@@ -209,8 +210,9 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
         int id = *it;
         auto work = [&](int pop) {
             int dup{0};
+            std::vector<int> list(pop);
             for(int i{0}; i < 100000 ; i++) {
-                auto list = generateNumbers(pop);
+                generateNumbers(list);
                 if(hasDuplicates(list)) ++dup; 
             }
             
@@ -225,32 +227,3 @@ TEST_F(ThreadPoolTest,BirthdayParadoxTPWithFutureTimingTest) {
         results.at(i).get();
     }
 } 
-
-
-TEST_F(ThreadPoolTest,BirthdayParadoxTPWithCallBackTimingTest) {
-    pool.start(4);
-    std::vector<int> results;
-    
-    TestTimer timer("4-sized-TP with Callback",0);
-    
-    for(auto it=popList.begin(); it!=popList.end(); ++it) {
-        int id = *it;
-        auto work = [&,id]() {
-            int dup{0};
-            for(int i{0}; i < 100000 ; i++) {
-                auto list = generateNumbers(id);
-                if(hasDuplicates(list)) ++dup; 
-                
-                    {
-                        std::lock_guard<std::mutex> guard(n); 
-                        results.push_back(dup);
-                    }
-            }
-            
-            incrementCountAndNotify();
-        };
-        
-        pool.add(work);       
-    } 
-    waitForNotificationOrFailOnTimeout(4);
-}
