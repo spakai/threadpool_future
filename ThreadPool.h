@@ -14,7 +14,7 @@ class ThreadPool {
   public:
   void start(unsigned int numberOfThreads) {
       for(unsigned int i{0}; i < numberOfThreads; i++) {
-         threads.push_back(std::make_shared<std::thread>(&ThreadPool::worker, this));
+        threads.push_back(std::thread(&ThreadPool::worker, this));
       } 
   }
 
@@ -80,10 +80,10 @@ class ThreadPool {
      done = true; 
      cv.notify_all();
      for(auto& t:threads) {
-         t->join();
+         t.join();
      }
   }
-  std::vector<std::shared_ptr<std::thread>> threads;  
+  std::vector<std::thread> threads;  
   std::deque<std::function<void()>> workQueue;                                                          
   std::atomic<bool> done {false};                                                                       
   std::mutex m;                                                                                         
