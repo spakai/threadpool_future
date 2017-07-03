@@ -4,22 +4,21 @@ In birthday_paradox , i used a classic threadpool. Here I try to write a threadp
 I am presenting a short demo on Java Future and Executor at work, so this would be a nice way of showing a C++ ExecutorService implementation
 
 # Code design 
-The change is at adding tasks, in the classic threadpool , it uses callback to update the result of the async process, here it would be returning a future. The issue seems to be that std::packaged_task is not copyable but moveable only but std::function is expecting something that is copyable.
 
-to do that , I had to understand the following C++ 11 syntax/concepts
+We need
 
-- type deduction for universal references
-- std::forward
-- std::packaged_task
-- std::bind
-- moveable and copyable
+i) A way to create threads and hold them in an idle state. 
 
-In http://www.mathematik.uni-ulm.de/numerik/hpc/ws15/uebungen/session19/hpc/mt/thread_pool.h.html and https://github.com/progschj/ThreadPool/blob/master/ThreadPool.h the authors have used shared_ptr to wrap the std::packaged_task as shared_ptrs are copyable and moveable.
+ii) A container to hold the tasks and which a client can push the tasks into.
 
-Anthony Williams in his book Concurrent C++ in Action uses a function wrapper to replace std::function so that it can be moveable.
+iii)  Have threads in the pool remove waiting tasks from the container and execute them. 
+
+I've used TDD to help write the code. 
+
 
 # Future plans
 Improve the feature set
 - Work stealing
 - Concurrent queue
-- Lock free data structures 
+- Lock free data structures
+- Take in features of ThreadPoolExecutor such as core pool size, max pool size, keep alive time, construct threads on demand
